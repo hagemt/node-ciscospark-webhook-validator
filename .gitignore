@@ -1,0 +1,5 @@
+coverage
+.nyc_output
+es5.js
+node_modules
+npm-debug.log

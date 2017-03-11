@@ -1,0 +1,57 @@
+{
+  "name": "ciscospark-webhook-validator",
+  "version": "0.9.0",
+  "description": "Use co-body and dataloader to validate incoming webhooks from Cisco Spark",
+  "author": "Tor E Hagemann <tor.hagemann@gmail.com>",
+  "homepage": "https://github.com/hagemt/node-ciscospark-webhook-validator#readme",
+  "license": "MIT",
+  "main": "es6.js",
+  "babel": {
+    "presets": [
+      "es2015"
+    ]
+  },
+  "bugs": {
+    "url": "https://github.com/hagemt/node-ciscospark-webhook-validator/issues"
+  },
+  "dependencies": {
+    "co-body": "5.0.2",
+    "dataloader": "1.3.0"
+  },
+  "devDependencies": {
+    "babel-cli": "6.23.0",
+    "babel-preset-es2015": "6.22.0",
+    "eslint": "3.17.1",
+    "mocha": "3.2.0",
+    "nock": "9.0.9",
+    "nyc": "10.1.2",
+    "request": "2.81.0",
+    "should": "11.2.1",
+    "sinon": "1.17.7",
+    "uuid": "3.0.1"
+  },
+  "engines": {
+    "node": ">=6.6.0"
+  },
+  "keywords": [
+    "Cisco",
+    "Spark",
+    "validate",
+    "webhook",
+    "parse",
+    "sha1",
+    "hmac"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hagemt/node-ciscospark-webhook-validator.git"
+  },
+  "scripts": {
+    "babel": "babel es6.js -o es5.js",
+    "mocha": "mocha",
+    "eslint": "eslint .eslintrc.js es6.js test",
+    "prepublish": "npm run-script babel",
+    "test": "nyc -- npm run-script mocha",
+    "posttest": "npm run-script eslint"
+  }
+}
