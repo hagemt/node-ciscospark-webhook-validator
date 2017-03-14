@@ -20,7 +20,7 @@ const server = createServer((req, res) => {
 if (!module.parent) {
 	// ignores process.env.CISCOSPARK_ACCESS_TOKEN:
 	Spark.getAccessToken = () => Promise.resolve('')
-	Spark.getRegisteredWebhook = () => Promise.resolve({
+	Spark.getWebhookDetails = () => Promise.resolve({
 		secret: 'correct-horse-battery-staple',
 	})
 	// eslint-disable-next-line no-magic-numbers

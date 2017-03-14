@@ -68,7 +68,7 @@ It is easy to adjust the validation process for many special circumstances:
 
 1) If your application uses a single token, export `CISCOSPARK_ACCESS_TOKEN`
 2) Or, `Spark.getAccessToken` may be replaced with a Promise-returning Function
-3) `Spark.getRegisteredWebhook` may be replaced similarly (see examples below)
+3) `Spark.getWebhookDetails` may be replaced similarly (see examples below)
 4) Additionally, the RequestCache and ResponseError type(s) may be replaced
 
 ### Examples
@@ -90,5 +90,5 @@ For example, if the webhook secret is a constant value:
 
 ```javascript
 const Spark = require('ciscospark-webhook-validator')
-Spark.getRegisteredWebhook = () => Promise.resolve({ secret: '...' })
+Spark.getWebhookDetails = () => Promise.resolve({ secret: '...' })
 ```
