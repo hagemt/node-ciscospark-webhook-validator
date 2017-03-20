@@ -86,11 +86,6 @@ const lessSafeEqual = (actual, expected) => actual.compare(expected) === 0
 // OpenSSL.timingSafeEqual has only been available since NodeJS v6.6.0
 const timingSafeEqual = _.get(OpenSSL, 'timingSafeEqual', lessSafeEqual)
 
-const sameBufferBytes = (actual, expected) => {
-	if (actual.length !== expected.length) return false
-	return timingSafeEqual(actual, expected)
-}
-
 const validateIncomingWebhook = req => BodyParser.text(req)
 	.then((text) => {
 		const header = _.get(req.headers, 'x-spark-signature', '')
@@ -100,7 +95,7 @@ const validateIncomingWebhook = req => BodyParser.text(req)
 			if (!secret) return Promise.reject(new Error('missing webhook secret'))
 			const stream = OpenSSL.createHmac('sha1', secret).update(text, 'utf8')
 			const [digest, signature] = [stream.digest(), Buffer.from(header, 'hex')]
-			if (sameBufferBytes(digest, signature)) return json // validated
+			if (timingSafeEqual(digest, signature)) return json // validated
 			return Promise.reject(new Error('invalid x-spark-signature'))
 		})
 	})

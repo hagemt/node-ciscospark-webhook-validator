@@ -98,7 +98,7 @@ describe('default (Spark)', () => {
 
 		beforeEach((done) => {
 			const getFakeWebhook = () => Promise.resolve({ secret })
-			outer.stub(Spark, 'getWebhookDetails', getFakeWebhook)
+			outer.stub(Spark, 'getWebhookDetails').callsFake(getFakeWebhook)
 			server.on('request', (req, res) => {
 				const check = (result) => {
 					const body = JSON.stringify(result) // echo:
@@ -123,7 +123,7 @@ describe('default (Spark)', () => {
 
 		describe('negative', () => {
 
-			it('does not validate webhook JSON (with an invalid signature)', () => {
+			it('does not validate JSON that has an invalid signature', () => {
 				const body = Object.freeze({ createdBy, id })
 				const digest = hexHMAC('sha1', secret, JSON.stringify(body))
 				const headers = {
@@ -142,7 +142,7 @@ describe('default (Spark)', () => {
 					})
 			})
 
-			it('does not validate JSON (that has is missing any signature)', () => {
+			it('does not validate JSON that has no signature', () => {
 				const body = Object.freeze({ createdBy, id })
 				return sendJSON({ body, headers: {} })
 					.then(() => {
@@ -167,7 +167,8 @@ describe('default (Spark)', () => {
 			})
 
 			it('rejects, if loading an invalid token', () => {
-				inner.stub(Spark, 'getAccessToken', () => Promise.resolve())
+				const getAccessToken = () => Promise.resolve() // no String
+				inner.stub(Spark, 'getAccessToken').callsFake(getAccessToken)
 				const body = Object.freeze({ createdBy, id })
 				const headers = {
 					'X-Spark-Signature': hexHMAC('sha1', secret, JSON.stringify(body)),
@@ -176,7 +177,8 @@ describe('default (Spark)', () => {
 			})
 
 			it('rejects, if loading an invalid webhook', () => {
-				inner.stub(Spark, 'getWebhookDetails', () => Promise.resolve({}))
+				const getWebhookDetails = () => Promise.resolve({}) // no secret
+				inner.stub(Spark, 'getWebhookDetails').callsFake(getWebhookDetails)
 				const body = Object.freeze({ createdBy, id })
 				const headers = {
 					'X-Spark-Signature': hexHMAC('sha1', secret, JSON.stringify(body)),

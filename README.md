@@ -9,6 +9,7 @@ In your project: `npm install --save ciscospark-webhook-validator`
 In `server.js`, or elsewhere in your application's module(s):
 
 ```javascript
+
 // business logic of a Spark webhook application:
 const handleJSON = ({ data, event, resource }) => {
 	const isMessagesCreated = resource === 'messages' && event === 'created'
@@ -16,21 +17,43 @@ const handleJSON = ({ data, event, resource }) => {
 	console.log('some human (not a Bot) created new Spark message(s):', data)
 }
 
+// see section below for customization; this is basic usage:
 const { validate } = require('ciscospark-webhook-validator')
 
+// request flow: validate some JSON body (handle it IFF valid)
+// possible responses are: 202 Accepted / 406 Not Acceptable
 const server = require('http').createServer((req, res) => {
-	const onAccepted = () => Object.assign(res, { statusCode: 202 }).end()
-	const onNotAcceptable = () => Object.assign(res, { statusCode: 406 }).end()
-	validate(req).then(handleJSON).then(onAccepted, onNotAcceptable)
-	// with `async/await` (or `co/yield`) could be written as:
-	// const valid = await validate(req).catch(() => null)
-	// if (valid) handleJSON(valid) // otherwise, ignored
+	const onceAccepted = () => Object.assign(res, { statusCode: 202 }).end()
+	const onceNotAcceptable = () => Object.assign(res, { statusCode: 406 }).end()
+	validate(req).then(handleJSON).then(onceAccepted, onceNotAcceptable)
 })
+
+// with async / await (or co / yield) validation could be:
+// const validJSON = await validate(req).catch(() => false)
+// if (validJSON) handleJSON(validJSON) // otherwise, ignored
+
+const port = process.env.PORT || 8080
+server.listen(({ port }, (listenError) => {
+	if (listenError) {
+		console.error(listenError)
+		process.exit(1)
+	} else {
+		console.log(`listening on PORT=${port}`)
+	}
+})
+
+// PROTIP: in another terminal, run these commands:
+// npm install ngrok # https://www.npmjs.com/package/ngrok
+// node_modules/.bin/ngrok http $PORT # targetUrl is HTTPS
+// with your token from https://developer.ciscospark.com/
+// create a new Spark webhook w/ $secret and $targetUrl
+// open http://localhost:4040/ in your favorite browser
+
 ```
 
 ## Basic use, safety, correctness, and efficiency
 
-~100 SLOC is provided by a single ES6 module. (and test coverage is high)
+~100 SLOC is provided by a single ES6 module. (and test coverage is complete)
 
 N.B. Legacy applications may `require('ciscospark-webhook-validator/es5')`.
 
