@@ -49,7 +49,7 @@
   },
   "scripts": {
     "babel": "babel es6.js -o es5.js",
-    "mocha": "mocha",
+    "mocha": "mocha --require should",
     "eslint": "eslint .eslintrc.js es6.js test",
     "prepublish": "npm run-script babel",
     "test": "nyc -- npm run-script mocha",
