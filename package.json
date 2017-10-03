@@ -8,7 +8,11 @@
   "main": "es6.js",
   "babel": {
     "presets": [
-      "es2015"
+      ["env", {
+        "targets": {
+          "node": "6.6"
+        }
+      }]
     ]
   },
   "bugs": {
@@ -51,7 +55,7 @@
     "babel": "babel es6.js -o es5.js",
     "mocha": "mocha --require should",
     "eslint": "eslint .eslintrc.js es6.js test",
-    "prepublish": "npm run-script babel",
+    "prepublishOnly": "npm run-script babel",
     "test": "nyc -- npm run-script mocha",
     "posttest": "npm run-script eslint"
   }
