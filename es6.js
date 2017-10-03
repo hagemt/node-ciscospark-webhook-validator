@@ -84,25 +84,18 @@ const Spark = {
 	},
 }
 
-/* istanbul ignore next */// better than nothing, but it's not preferable:
-const lessSafeEqual = (actual, expected) => actual.compare(expected) === 0
-
-// OpenSSL.timingSafeEqual has only been available since NodeJS v6.6.0
-const timingSafeEqual = _.get(OpenSSL, 'timingSafeEqual', lessSafeEqual)
-
-const validateIncomingWebhook = req => BodyParser.text(req)
-	.then((text) => {
-		const header = _.get(req.headers, 'x-spark-signature', '')
-		if (!header) return Promise.reject(new Error('missing x-spark-signature'))
-		const json = JSON.parse(text) // will load details and check signature:
-		return Spark.getWebhookDetails(json).then(({ secret }) => {
-			if (!secret) return Promise.reject(new Error('missing webhook secret'))
-			const stream = OpenSSL.createHmac('sha1', secret).update(text, 'utf8')
-			const [digest, signature] = [stream.digest(), Buffer.from(header, 'hex')]
-			if (timingSafeEqual(digest, signature)) return json // validated
-			return Promise.reject(new Error('invalid x-spark-signature'))
-		})
+const validateIncomingWebhook = (text, headers) => {
+	const header = _.get(headers, 'x-spark-signature') // non-empty String, or:
+	if (!header) return Promise.reject(new Error('missing x-spark-signature'))
+	const json = JSON.parse(text) // will load details and check signature:
+	return Spark.getWebhookDetails(json).then(({ secret }) => {
+		if (!secret) return Promise.reject(new Error('missing webhook secret'))
+		const stream = OpenSSL.createHmac('sha1', secret).update(text, 'utf8')
+		const [digest, signature] = [stream.digest(), Buffer.from(header, 'hex')]
+		if (OpenSSL.timingSafeEqual(digest, signature)) return json // or:
+		return Promise.reject(new Error('invalid x-spark-signature'))
 	})
+}
 
 const validate = (req) => {
 	/* istanbul ignore next */
@@ -110,7 +103,24 @@ const validate = (req) => {
 		// coalesce calls on same req:
 		return validate.cache.get(req)
 	}
-	const promise = validateIncomingWebhook(req)
+	if (!(_.get(req, 'req', req) instanceof HTTP.IncomingMessage)) {
+		return Promise.reject(new Error('cannot validate request'))
+	}
+	const promise = Promise.resolve()
+		.then(() => {
+			// unofficially support koa-bodyparser
+			const RAW_BODY_REQUEST_KEY = 'rawBody'
+			/* istanbul ignore next */
+			if (RAW_BODY_REQUEST_KEY in req) {
+				const text = req[RAW_BODY_REQUEST_KEY] // upstream
+				return validateIncomingWebhook(text, req.headers)
+			}
+			return BodyParser.text(req)
+				.then((text) => {
+					req[RAW_BODY_REQUEST_KEY] = text // downstream
+					return validateIncomingWebhook(text, req.headers)
+				})
+		})
 		.catch((reason) => {
 			// auto-evict on rejection:
 			validate.cache.delete(req)
