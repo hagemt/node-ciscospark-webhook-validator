@@ -1,7 +1,13 @@
 /* eslint-env node */
 module.exports = {
-	extends: 'eslint:all',
+
+	extends: [
+		'eslint:all',
+	],
+
 	rules: {
+		'array-bracket-newline': ['off'],
+		'array-element-newline': ['off'],
 		'arrow-body-style': ['off'],
 		'arrow-parens': ['error', 'as-needed', { requireForBlockBody: true }],
 		'capitalized-comments': ['off'],
@@ -32,4 +38,5 @@ module.exports = {
 		'spaced-comment': ['off'],
 		'strict': ['error', 'never'],
 	},
+
 }
