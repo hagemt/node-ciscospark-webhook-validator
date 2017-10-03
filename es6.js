@@ -11,14 +11,12 @@ _.get = (maybeObject, keyString, defaultValue) => {
 	return Object(maybeObject)[keyString] || defaultValue
 }
 
-// eslint-disable-next-line no-magic-numbers
-const [OK, NOT_OK] = [200, 400]
-
 class SparkResponseError extends Error {
 
 	constructor (res) {
 		const body = SparkResponseError.getBody(res)
-		const statusCode = _.get(res, 'statusCode', NOT_OK)
+		// eslint-disable-next-line no-magic-numbers
+		const statusCode = _.get(res, 'statusCode', 400)
 		const text = _.get(body, 'message', HTTP.STATUS_CODES[statusCode])
 		super(`${text} (tracking ID: ${_.get(body, 'trackingid', 'none')})`)
 		Object.freeze(Object.defineProperty(this, 'response', { value: res }))
@@ -38,7 +36,7 @@ class SparkResponseError extends Error {
 // will batch and cache REST API response(s):
 class SparkWebhookLoader extends DataLoader {
 	constructor (sparkAccessToken) {
-		const requestResponse = webhookID => new Promise((resolve, reject) => {
+		const getWebhook = webhookID => new Promise((resolve, reject) => {
 			const options = {
 				headers: {
 					Accept: 'application/json', // required
@@ -50,7 +48,8 @@ class SparkWebhookLoader extends DataLoader {
 			const req = HTTPS.get(options, (res) => {
 				const done = (body) => {
 					res.body = body // for SparkResponseError
-					if (res.statusCode === OK) resolve(body)
+					// eslint-disable-next-line no-magic-numbers
+					if (res.statusCode === 200) resolve(body)
 					else reject(new SparkResponseError(res))
 				}
 				// consume the (incoming) res much like a req
@@ -58,24 +57,29 @@ class SparkWebhookLoader extends DataLoader {
 			})
 			req.once('error', reject)
 		})
-		super(webhookIDs => Promise.all(webhookIDs.map(requestResponse)))
+		super(webhookIDs => Promise.all(webhookIDs.map(getWebhook)))
 	}
 }
 
 // Once a token is known, it may be used to load a user's webhook details.
-const loaders = new DataLoader((tokens) => { // will memoize Promises by ID
+const loaders = new DataLoader((tokens) => {
+	// Any token which is clearly invalid could/should throw here instead?
 	return Promise.all(tokens.map(token => new SparkWebhookLoader(token)))
 })
 
 const Spark = {
 	RequestCache: WeakMap,
 	ResponseError: SparkResponseError,
-	// eslint-disable-next-line no-process-env
-	getAccessToken: () => Promise.resolve(process.env.CISCOSPARK_ACCESS_TOKEN),
-	// user may override this function, and/or one above
-	getWebhookDetails: ({ createdBy, id }) => {
+	getAccessToken: () => {
+		// eslint-disable-next-line no-process-env
+		return Promise.resolve(process.env.CISCOSPARK_ACCESS_TOKEN)
+	},
+	getWebhookDetails: (maybeWebhook) => {
+		// could/should pass args to getAccessToken?
+		const createdBy = _.get(maybeWebhook, 'createdBy')
+		const id = _.get(maybeWebhook, 'id', maybeWebhook)
 		return Spark.getAccessToken(createdBy)
-			.then(tokenString => loaders.load(tokenString))
+			.then(token => loaders.load(token))
 			.then(loader => loader.load(id))
 	},
 }
