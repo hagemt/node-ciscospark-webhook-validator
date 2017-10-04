@@ -70,6 +70,8 @@ if (process.env.CISCOSPARK_ACCESS_TOKEN) {
 
 ~100 SLOC is provided by a single ES6 module. (and test coverage is complete)
 
+NodeJS's `crypto.timingSafeEqual` is used to compare the contents of Buffers.
+
 N.B. Legacy applications may `require('ciscospark-webhook-validator/es5')`.
 
 ### Algorithm Correctness
@@ -79,10 +81,6 @@ Via `co-body` a `req`'s body is digested as text and then `JSON.parse`'d.
 Using HTTPS + `Authorization`, that webhook's `secret` is requested from Spark.
 
 `X-Spark-Signature` is compared against the digest; validated JSON is returned.
-
-If possible, NodeJS's `crypto.timingSafeEqual` is used to compare `Buffer` bytes.
-
-N.B. Prior to v6.6.0, `crypto.timingSafeEqual` was not available; a fallback is provided.
 
 Correctness follows from use of the webhook's fetched `secret` for HMAC validation.
 
