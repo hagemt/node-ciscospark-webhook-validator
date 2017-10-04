@@ -7,14 +7,10 @@ const sinon = require('sinon')
 const request = require('request')
 const UUID = require('uuid')
 
-/* eslint-disable no-process-env */
 const Spark = require('../es6.js')
 
 // eslint-disable-next-line no-magic-numbers, no-process-env
-const [OK, NOT_OK, PORT] = [200, 400, process.env.PORT || 8080]
-
-// eslint-disable-next-line no-magic-numbers
-const [KEY, BYTES] = ['CISCOSPARK_ACCESS_TOKEN', 32]
+const [BYTES, NOT_OK, OK, PORT] = [32, 400, 200, process.env.PORT || 8080]
 
 const hexHMAC = (algorithm, secret, ...args) => {
 	const stream = OpenSSL.createHmac(algorithm, secret) // supports 'sha1'
@@ -36,9 +32,11 @@ const token = base64url(OpenSSL.randomBytes(BYTES))
 describe('default (Spark)', () => {
 
 	const sandbox = sinon.sandbox.create()
+	const SECRET = 'CISCOSPARK_ACCESS_TOKEN'
 
 	before(() => {
-		sandbox.stub(process, 'env', { [KEY]: token })
+		// eslint-disable-next-line no-process-env
+		process.env[SECRET] = token
 	})
 
 	describe('RequestCache', () => {
@@ -60,7 +58,7 @@ describe('default (Spark)', () => {
 	})
 
 	describe('getAccessToken (function)', () => {
-		it(`by default, Promises process.env.${KEY}`, () => {
+		it(`by default, Promises process.env.${SECRET}`, () => {
 			return Spark.getAccessToken(createdBy)
 				.then((value) => {
 					token.should.equal(value)
@@ -166,6 +164,12 @@ describe('default (Spark)', () => {
 				outer.restore()
 			})
 
+			it('rejects, if req (and req.req) is not http.IncomingMessage', () => {
+				return Promise.all([
+					Spark.validate().should.be.rejectedWith(Error),
+				])
+			})
+
 			it('rejects, if loading an invalid token', () => {
 				const getAccessToken = () => Promise.resolve() // no String
 				inner.stub(Spark, 'getAccessToken').callsFake(getAccessToken)
@@ -213,6 +217,8 @@ describe('default (Spark)', () => {
 
 	after(() => {
 		sandbox.restore()
+		// eslint-disable-next-line no-process-env
+		delete process.env[SECRET]
 	})
 
 })
