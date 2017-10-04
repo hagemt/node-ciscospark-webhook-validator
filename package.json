@@ -1,6 +1,6 @@
 {
   "name": "ciscospark-webhook-validator",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "description": "Use co-body and dataloader to validate incoming webhooks from Cisco Spark",
   "author": "Tor E Hagemann <tor.hagemann@gmail.com>",
   "homepage": "https://github.com/hagemt/node-ciscospark-webhook-validator#readme",
