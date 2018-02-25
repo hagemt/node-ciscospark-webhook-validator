@@ -8,11 +8,14 @@
   "main": "es6.js",
   "babel": {
     "presets": [
-      ["env", {
-        "targets": {
-          "node": "6.6"
+      [
+        "env",
+        {
+          "targets": {
+            "node": "6.6"
+          }
         }
-      }]
+      ]
     ]
   },
   "bugs": {
@@ -20,20 +23,24 @@
   },
   "dependencies": {
     "co-body": "5.1.1",
-    "dataloader": "1.3.0"
+    "dataloader": "1.4.0",
+    "node-fetch": "2.0.0"
   },
   "devDependencies": {
     "babel-cli": "6.26.0",
-    "babel-preset-env": "1.6.0",
-    "eslint": "4.8.0",
-    "mocha": "4.0.0",
-    "ngrok": "2.2.22",
-    "nock": "9.0.22",
-    "nyc": "11.2.1",
+    "babel-preset-env": "1.6.1",
+    "eslint": "4.18.1",
+    "eslint-plugin-import": "2.8.0",
+    "eslint-plugin-mocha": "4.11.0",
+    "eslint-plugin-node": "6.0.0",
+    "mocha": "5.0.1",
+    "ngrok": "2.2.26",
+    "nock": "9.2.1",
+    "nyc": "11.4.1",
     "request": "2.83.0",
-    "should": "13.1.0",
-    "sinon": "4.0.0",
-    "uuid": "3.1.0"
+    "should": "13.2.1",
+    "sinon": "4.4.1",
+    "uuid": "3.2.1"
   },
   "engines": {
     "node": ">=6.6.0"
@@ -53,10 +60,11 @@
   },
   "scripts": {
     "babel": "babel es6.js -o es5.js",
-    "mocha": "mocha --require should",
-    "eslint": "eslint .eslintrc.js es6.js test",
+    "coverage": "nyc mocha --require should",
+    "eslint": "eslint .eslintrc.js es6.js extras test --report-unused-disable-directives",
+    "posttest": "npm run-script eslint -- --max-warnings 0",
     "prepublishOnly": "npm run-script babel",
-    "test": "nyc -- npm run-script mocha",
-    "posttest": "npm run-script eslint"
+    "pretest": "npm run-script eslint -- --fix",
+    "test": "npm run coverage"
   }
 }

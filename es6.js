@@ -84,18 +84,29 @@ const Spark = {
 	},
 }
 
-const validateIncomingWebhook = (text, headers) => {
-	const header = _.get(headers, 'x-spark-signature') // non-empty String, or:
-	if (!header) return Promise.reject(new Error('missing x-spark-signature'))
-	const json = JSON.parse(text) // will load details and check signature:
-	return Spark.getWebhookDetails(json).then(({ secret }) => {
-		if (!secret) return Promise.reject(new Error('missing webhook secret'))
-		const stream = OpenSSL.createHmac('sha1', secret).update(text, 'utf8')
-		const [digest, signature] = [stream.digest(), Buffer.from(header, 'hex')]
-		if (OpenSSL.timingSafeEqual(digest, signature)) return json // or:
-		return Promise.reject(new Error('invalid x-spark-signature'))
-	})
+const WEBHOOK_HMAC_HEADER_NAME = 'x-spark-signature'
+const WEBHOOK_BODY_LIMIT_BYTES = 1048576 // one megabyte
+const hmacStream = (utf8, secret, algorithm = 'sha1') => {
+	return OpenSSL.createHmac(algorithm, secret).update(utf8, 'utf8')
 }
+
+const validateIncomingWebhook = (body, headers) => Promise.resolve()
+	.then(() => {
+		const json = JSON.parse(body) // may throw (will reject)
+		const header = _.get(headers, WEBHOOK_HMAC_HEADER_NAME, '')
+		if (!header) throw new Error(`missing ${WEBHOOK_HMAC_HEADER_NAME}`)
+		return Spark.getWebhookDetails(json)
+			.then(({ secret }) => {
+				if (!secret) throw new Error('missing webhook secret')
+				const actual = hmacStream(body, secret).digest() // Buffer
+				const expected = Buffer.alloc(actual.length, header, 'hex')
+				if (OpenSSL.timingSafeEqual(actual, expected)) return json
+				throw new Error(`invalid ${WEBHOOK_HMAC_HEADER_NAME}`)
+			})
+	})
+
+// unofficially support koa-bodyparser
+const RAW_BODY_REQUEST_KEY = 'rawBody'
 
 const validate = (req) => {
 	/* istanbul ignore next */
@@ -108,18 +119,20 @@ const validate = (req) => {
 	}
 	const promise = Promise.resolve()
 		.then(() => {
-			// unofficially support koa-bodyparser
-			const RAW_BODY_REQUEST_KEY = 'rawBody'
 			/* istanbul ignore next */
 			if (RAW_BODY_REQUEST_KEY in req) {
 				const text = req[RAW_BODY_REQUEST_KEY] // upstream
 				return validateIncomingWebhook(text, req.headers)
 			}
-			return BodyParser.text(req)
+			return BodyParser.text(req, { limit: WEBHOOK_BODY_LIMIT_BYTES })
 				.then((text) => {
 					req[RAW_BODY_REQUEST_KEY] = text // downstream
 					return validateIncomingWebhook(text, req.headers)
 				})
+		})
+		.then((result) => {
+			req.body = result
+			return result
 		})
 		.catch((reason) => {
 			// auto-evict on rejection:
@@ -130,9 +143,11 @@ const validate = (req) => {
 	return promise
 }
 
-// WeakMap is a perfect default RequestCache
-// Promise(s) will be GC'd along with req(s)
-// due to eviction semantics of "weak" key(s)
+/*
+ * WeakMap is a perfect default RequestCache
+ * Promise(s) will be GC'd along with req(s)
+ * due to eviction semantics of "weak" key(s)
+ */
 validate.cache = new Spark.RequestCache()
 
 Object.defineProperty(validate, 'loaders', { value: loaders })
