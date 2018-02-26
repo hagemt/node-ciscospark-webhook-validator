@@ -1,22 +1,25 @@
-/* eslint-env es6, node */
+/* eslint-env node */
 const HTTP = require('http')
 const HTTPS = require('https')
 const OpenSSL = require('crypto')
 
-const BodyParser = require('co-body')
 const DataLoader = require('dataloader')
+//const fetch = require('node-fetch')
+const parse = require('co-body')
 
 const _ = {} // duplicates essential functionality:
 _.get = (maybeObject, keyString, defaultValue) => {
 	return Object(maybeObject)[keyString] || defaultValue
 }
 
+// eslint-disable-next-line no-magic-numbers
+const [OK, UNAUTHORIZED] = [200, 401]
+
 class SparkResponseError extends Error {
 
 	constructor (res) {
 		const body = SparkResponseError.getBody(res)
-		// eslint-disable-next-line no-magic-numbers
-		const statusCode = _.get(res, 'statusCode', 400)
+		const statusCode = _.get(res, 'statusCode', UNAUTHORIZED)
 		const text = _.get(body, 'message', HTTP.STATUS_CODES[statusCode])
 		super(`${text} (tracking ID: ${_.get(body, 'trackingid', 'none')})`)
 		Object.freeze(Object.defineProperty(this, 'response', { value: res }))
@@ -33,13 +36,18 @@ class SparkResponseError extends Error {
 
 }
 
-// will batch and cache REST API response(s):
+const Spark = { // will become module.exports (will include .validate)
+	// must evict (and GC) value:Promise(s) along with key:Request(s):
+	RequestCache: WeakMap, // has perfect semantics for a RequestCache
+	ResponseError: SparkResponseError, // exported for convenience
+}
+
 class SparkWebhookLoader extends DataLoader {
 	constructor (sparkAccessToken) {
-		const getWebhook = webhookID => new Promise((resolve, reject) => {
+		const fetchWebhook = webhookID => new Promise((resolve, reject) => {
 			const options = {
 				headers: {
-					Accept: 'application/json', // required
+					//Accept: 'application/json', // default
 					Authorization: `Bearer ${sparkAccessToken}`,
 				},
 				hostname: 'api.ciscospark.com',
@@ -48,40 +56,64 @@ class SparkWebhookLoader extends DataLoader {
 			const req = HTTPS.get(options, (res) => {
 				const done = (body) => {
 					res.body = body // for SparkResponseError
-					// eslint-disable-next-line no-magic-numbers
-					if (res.statusCode === 200) resolve(body)
+					/* istanbul ignore next */
+					if (res.statusCode === UNAUTHORIZED) {
+						// forget any token that results in 401:
+						Spark.loaders.clear(sparkAccessToken)
+					}
+					if (res.statusCode === OK) resolve(body)
 					else reject(new SparkResponseError(res))
 				}
 				// consume the (incoming) res much like a req
-				BodyParser.json({ req: res }).then(done, reject)
+				parse.json({ req: res }).then(done, reject)
 			})
 			req.once('error', reject)
 		})
-		super(webhookIDs => Promise.all(webhookIDs.map(getWebhook)))
+		// DL will batch/cache request/response(s) to/from REST API:
+		super(webhookIDs => Promise.all(webhookIDs.map(fetchWebhook)))
+		// DL Documentation: https://github.com/facebook/dataloader
 	}
 }
 
-// Once a token is known, it may be used to load a user's webhook details.
-const loaders = new DataLoader((tokens) => {
-	// Any token which is clearly invalid could/should throw here instead?
-	return Promise.all(tokens.map(token => new SparkWebhookLoader(token)))
+// by default, use the default RequestCache constructor:
+Spark.createRequestCache = () => new Spark.RequestCache()
+
+// by default, obtain single token from environment via Promise:
+Spark.getAccessToken = (/* createdBy: sparkBotPersonID */) => {
+	// eslint-disable-next-line no-process-env
+	return Promise.resolve(process.env.CISCOSPARK_ACCESS_TOKEN)
+}
+
+// by default, map unique tokens => specialized DL
+const defaultDataLoader = new DataLoader((tokens) => {
+	// might need to de-duplicate tokens:Array (passed as first argument) or not
+	return Promise.all(tokens.map(token => Spark.loaders.createDataLoader(token)))
+	// might need LRU cache; for now, just use `DataLoader#clearAll` as needed
 })
 
-const Spark = {
-	RequestCache: WeakMap,
-	ResponseError: SparkResponseError,
-	getAccessToken: () => {
-		// eslint-disable-next-line no-process-env
-		return Promise.resolve(process.env.CISCOSPARK_ACCESS_TOKEN)
-	},
-	getWebhookDetails: (maybeWebhook) => {
-		// could/should pass args to getAccessToken?
-		const createdBy = _.get(maybeWebhook, 'createdBy')
-		const id = _.get(maybeWebhook, 'id', maybeWebhook)
-		return Spark.getAccessToken(createdBy)
-			.then(token => loaders.load(token))
-			.then(loader => loader.load(id))
-	},
+Spark.loaders = defaultDataLoader // singleton, delegates to:
+Spark.loaders.createDataLoader = (...args) => Promise.resolve()
+	.then(() => new SparkWebhookLoader(...args)) // special DataLoader
+
+/*
+ * By default, use Functions defined above like so:
+ * 1. obtain the bot token = f(webhook.createdBy)
+ * 2. obtain a specialized DL for webhook metadata
+ * 3. obtain webhook metadata (including secret)
+ * This scheme ensures data isolated by token.
+ *
+ * Webhook metadata is never deleted explicitly.
+ * However, a DataLoader is forgotten upon 401.
+ * This ensures revoked tokens do not persist.
+ *
+ * (should scale to thousands of tokens/webhooks)
+ */
+Spark.getWebhookDetails = (maybeWebhook) => {
+	const createdBy = _.get(maybeWebhook, 'createdBy')
+	const id = _.get(maybeWebhook, 'id', maybeWebhook)
+	return Spark.getAccessToken(createdBy)
+		.then(token => Spark.loaders.load(token))
+		.then(loader => loader.load(id))
 }
 
 const WEBHOOK_HMAC_HEADER_NAME = 'x-spark-signature'
@@ -90,7 +122,7 @@ const hmacStream = (utf8, secret, algorithm = 'sha1') => {
 	return OpenSSL.createHmac(algorithm, secret).update(utf8, 'utf8')
 }
 
-const validateIncomingWebhook = (body, headers) => Promise.resolve()
+const validateIncoming = (body, headers) => Promise.resolve()
 	.then(() => {
 		const json = JSON.parse(body) // may throw (will reject)
 		const header = _.get(headers, WEBHOOK_HMAC_HEADER_NAME, '')
@@ -105,51 +137,43 @@ const validateIncomingWebhook = (body, headers) => Promise.resolve()
 			})
 	})
 
-// unofficially support koa-bodyparser
+// support for standard body parser(s):
 const RAW_BODY_REQUEST_KEY = 'rawBody'
 
 const validate = (req) => {
-	/* istanbul ignore next */
-	if (validate.cache.has(req)) {
-		// coalesce calls on same req:
-		return validate.cache.get(req)
-	}
 	if (!(_.get(req, 'req', req) instanceof HTTP.IncomingMessage)) {
 		return Promise.reject(new Error('cannot validate request'))
+	}
+	const { cache } = validate
+	/* istanbul ignore next */
+	if (cache.has(req)) {
+		// prevents double parse:
+		return cache.get(req)
 	}
 	const promise = Promise.resolve()
 		.then(() => {
 			/* istanbul ignore next */
 			if (RAW_BODY_REQUEST_KEY in req) {
-				const text = req[RAW_BODY_REQUEST_KEY] // upstream
-				return validateIncomingWebhook(text, req.headers)
+				// for body, already parsed upstream:
+				const text = req[RAW_BODY_REQUEST_KEY]
+				return validateIncoming(text, req.headers)
 			}
-			return BodyParser.text(req, { limit: WEBHOOK_BODY_LIMIT_BYTES })
+			return parse.text(req, { limit: WEBHOOK_BODY_LIMIT_BYTES })
 				.then((text) => {
-					req[RAW_BODY_REQUEST_KEY] = text // downstream
-					return validateIncomingWebhook(text, req.headers)
+					// for body parsed downstream:
+					req[RAW_BODY_REQUEST_KEY] = text
+					return validateIncoming(text, req.headers)
 				})
-		})
-		.then((result) => {
-			req.body = result
-			return result
 		})
 		.catch((reason) => {
 			// auto-evict on rejection:
-			validate.cache.delete(req)
+			cache.delete(req) // quietly:
 			return Promise.reject(reason)
 		})
-	validate.cache.set(req, promise)
+	cache.set(req, promise)
 	return promise
 }
 
-/*
- * WeakMap is a perfect default RequestCache
- * Promise(s) will be GC'd along with req(s)
- * due to eviction semantics of "weak" key(s)
- */
-validate.cache = new Spark.RequestCache()
+validate.cache = Spark.createRequestCache() // by default, WeakMap
 
-Object.defineProperty(validate, 'loaders', { value: loaders })
-Object.defineProperty(Spark, 'validate', { value: validate })
-module.exports = Object.assign(Spark, { default: validate })
+module.exports = Object.assign(Spark, { default: validate, validate })
