@@ -25,12 +25,14 @@ if (!module.parent) {
 	})
 	// eslint-disable-next-line no-magic-numbers
 	const port = process.env.PORT || 8080
-	// PROTIP: in another terminal, run these commands:
-	// npm install ngrok # https://www.npmjs.com/package/ngrok
-	// node_modules/.bin/ngrok http $PORT # targetUrl = HTTPS
-	// with your token from https://developer.ciscospark.com/
-	// create a new Spark webhook w/ $secret and $targetUrl
-	// open http://localhost:4040/ in your favorite browser
+	/*
+	 * PROTIP: in another terminal, run these commands:
+	 * npm install ngrok # https://www.npmjs.com/package/ngrok
+	 * node_modules/.bin/ngrok http $PORT # targetUrl = HTTPS
+	 * with your token from https://developer.ciscospark.com/
+	 * create a new Spark webhook w/ $secret and $targetUrl
+	 * open http://localhost:4040/ in your favorite browser
+	 */
 	server.listen({ port }, (listenError) => {
 		if (listenError) {
 			console.error(listenError) // eslint-disable-line no-console

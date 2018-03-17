@@ -2,10 +2,11 @@
 const HTTP = require('http')
 const OpenSSL = require('crypto')
 
-const nock = require('nock')
-const sinon = require('sinon')
-const request = require('request')
-const UUID = require('uuid')
+const nock = require('nock') // eslint-disable-line node/no-unpublished-require
+const sinon = require('sinon') // eslint-disable-line node/no-unpublished-require
+
+const request = require('request') // eslint-disable-line node/no-unpublished-require
+const UUID = require('uuid') // eslint-disable-line node/no-unpublished-require
 
 const Spark = require('../es6.js')
 
@@ -24,7 +25,7 @@ const urlSafe = base64 => base64.replace(/=+$/g, '') // strip '='s from EOL
 
 const base64url = (...args) => urlSafe(Buffer.from(...args).toString('base64'))
 
-const createdBy = base64url(`ciscospark://us/BOT/${UUID.v4()}`)
+const createdBy = base64url(`ciscospark://us/PERSON/${UUID.v4()}`)
 const id = base64url(`ciscospark://us/WEBHOOK/${UUID.v4()}`)
 const secret = base64url(OpenSSL.randomBytes(BYTES))
 const token = base64url(OpenSSL.randomBytes(BYTES))
@@ -77,7 +78,7 @@ describe('default (Spark)', () => {
 		})
 	})
 
-	describe('validate{IncomingWebhook} (function)', () => {
+	describe('validate{Incoming{Webhook}} (function)', () => {
 
 		const server = HTTP.createServer()
 		const outer = sinon.sandbox.create()
@@ -208,7 +209,7 @@ describe('default (Spark)', () => {
 
 		afterEach((done) => {
 			server.removeAllListeners('request')
-			Spark.validate.loaders.clearAll()
+			Spark.loaders.clearAll()
 			server.close(done)
 			outer.restore()
 		})
