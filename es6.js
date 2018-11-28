@@ -1,4 +1,5 @@
 /* eslint-env es6, node */
+/* eslint-disable max-classes-per-file */
 const HTTP = require('http')
 const HTTPS = require('https')
 const OpenSSL = require('crypto')
@@ -130,9 +131,11 @@ const validate = (req) => {
 	return promise
 }
 
-// WeakMap is a perfect default RequestCache
-// Promise(s) will be GC'd along with req(s)
-// due to eviction semantics of "weak" key(s)
+/*
+ * WeakMap is a perfect default RequestCache
+ * Promise(s) will be GC'd along with req(s)
+ * due to eviction semantics of "weak" key(s)
+ */
 validate.cache = new Spark.RequestCache()
 
 Object.defineProperty(validate, 'loaders', { value: loaders })
