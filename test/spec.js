@@ -1,4 +1,5 @@
 /* eslint-env es6, mocha, node */
+/* eslint-disable max-lines-per-function */
 const HTTP = require('http')
 const OpenSSL = require('crypto')
 
@@ -18,9 +19,9 @@ const hexHMAC = (algorithm, secret, ...args) => {
 	return stream.digest('hex') // 160-bit SHA-1: 20 bytes (40 hex characters)
 }
 
-const urlSafe = base64 => base64.replace(/=+$/g, '') // strip '='s from EOL
-	.replace(/\+/g, '-') // replace each '+' (URL query conjunction) with '-'
-	.replace(/\//g, '_') // replace each '/' (URL path conjunction) with '_'
+const urlSafe = base64 => base64.replace(/=+$/gu, '') // strip '='s from EOL
+	.replace(/\+/gu, '-') // replace each '+' (URL query conjunction) with '-'
+	.replace(/\//gu, '_') // replace each '/' (URL path conjunction) with '_'
 
 const base64url = (...args) => urlSafe(Buffer.from(...args).toString('base64'))
 
