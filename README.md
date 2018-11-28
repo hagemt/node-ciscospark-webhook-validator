@@ -136,7 +136,7 @@ const Spark = require('ciscospark-webhook-validator')
 Spark.getWebhookDetails = () => Promise.resolve({ secret: '...' })
 ```
 
-#### When a different Spark API endpoing may/must be provided somehow
+#### When a different Spark API endpoint may/must be provided somehow
 
 For example, if you want to test against a self-hosted, mock, or other implementation of the Spark APIs:
 
