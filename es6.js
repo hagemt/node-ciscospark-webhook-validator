@@ -34,6 +34,18 @@ class SparkResponseError extends Error {
 
 }
 
+const Spark = {
+	RequestCache: WeakMap,
+	ResponseError: SparkResponseError,
+	getAPIEndpoint: () => {
+		return 'api.ciscospark.com'
+	},
+	getAccessToken: () => {
+		// eslint-disable-next-line no-process-env
+		return Promise.resolve(process.env.CISCOSPARK_ACCESS_TOKEN)
+	},
+}
+
 // will batch and cache REST API response(s):
 class SparkWebhookLoader extends DataLoader {
 	constructor (sparkAccessToken) {
@@ -43,7 +55,7 @@ class SparkWebhookLoader extends DataLoader {
 					Accept: 'application/json', // required
 					Authorization: `Bearer ${sparkAccessToken}`,
 				},
-				hostname: 'api.ciscospark.com',
+				hostname: Spark.getAPIEndpoint(),
 				path: `/v1/webhooks/${webhookID}`,
 			}
 			const req = HTTPS.get(options, (res) => {
@@ -68,21 +80,13 @@ const loaders = new DataLoader((tokens) => {
 	return Promise.all(tokens.map(token => new SparkWebhookLoader(token)))
 })
 
-const Spark = {
-	RequestCache: WeakMap,
-	ResponseError: SparkResponseError,
-	getAccessToken: () => {
-		// eslint-disable-next-line no-process-env
-		return Promise.resolve(process.env.CISCOSPARK_ACCESS_TOKEN)
-	},
-	getWebhookDetails: (maybeWebhook) => {
-		// could/should pass args to getAccessToken?
-		const createdBy = _.get(maybeWebhook, 'createdBy')
-		const id = _.get(maybeWebhook, 'id', maybeWebhook)
-		return Spark.getAccessToken(createdBy)
-			.then(token => loaders.load(token))
-			.then(loader => loader.load(id))
-	},
+Spark.getWebhookDetails = (maybeWebhook) => {
+	// could/should pass args to getAccessToken?
+	const createdBy = _.get(maybeWebhook, 'createdBy')
+	const id = _.get(maybeWebhook, 'id', maybeWebhook)
+	return Spark.getAccessToken(createdBy)
+		.then(token => loaders.load(token))
+		.then(loader => loader.load(id))
 }
 
 const validateIncomingWebhook = (text, headers) => {
