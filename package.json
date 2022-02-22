@@ -22,7 +22,7 @@
     "url": "https://github.com/hagemt/node-ciscospark-webhook-validator/issues"
   },
   "dependencies": {
-    "co-body": "6.0.0",
+    "co-body": "6.1.0",
     "dataloader": "1.4.0"
   },
   "devDependencies": {
