@@ -3,7 +3,9 @@
 [![Travis CI badge](https://api.travis-ci.org/hagemt/node-ciscospark-webhook-validator.svg?branch=master)](https://travis-ci.org/hagemt/node-ciscospark-webhook-validator)
 [![Greenkeeper badge](https://badges.greenkeeper.io/hagemt/node-ciscospark-webhook-validator.svg)](https://account.greenkeeper.io/account/hagemt)
 
-Official documentation available at: https://developer.ciscospark.com/webhooks-explained.html
+NOTE: "Spark" was previous branding for the Cisco Webex Teams message platform.
+
+Official documentation available at: https://developer.webex.com/docs/webhooks#overview
 
 This module facilitates business-logic that operates on a Cisco Spark webhook payload, such as:
 
