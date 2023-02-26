@@ -32,7 +32,7 @@ const token = base64url(OpenSSL.randomBytes(BYTES))
 
 describe('default (Spark)', () => {
 
-	const sandbox = sinon.sandbox.create()
+	const sandbox = sinon.createSandbox()
 	const SECRET = 'CISCOSPARK_ACCESS_TOKEN'
 
 	before(() => {
@@ -81,7 +81,7 @@ describe('default (Spark)', () => {
 	describe('validate{IncomingWebhook} (function)', () => {
 
 		const server = HTTP.createServer()
-		const outer = sinon.sandbox.create()
+		const outer = sinon.createSandbox()
 
 		const defaults = Object.freeze({
 			json: true, // body's are JSON
@@ -159,7 +159,7 @@ describe('default (Spark)', () => {
 
 		describe('exceptions', () => {
 
-			const inner = sinon.sandbox.create()
+			const inner = sinon.createSandbox()
 
 			beforeEach(() => {
 				outer.restore()
