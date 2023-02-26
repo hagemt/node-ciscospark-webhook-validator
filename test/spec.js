@@ -10,8 +10,8 @@ const UUID = require('uuid')
 
 const Spark = require('../es6.js')
 
-// eslint-disable-next-line no-magic-numbers, no-process-env
-const [BYTES, NOT_OK, OK, PORT] = [32, 400, 200, process.env.PORT || 8080]
+// eslint-disable-next-line no-magic-numbers
+const [BYTES, NOT_OK, OK, PORT] = [32, 400, 200, process.env.PORT || '48080']
 
 const hexHMAC = (algorithm, secret, ...args) => {
 	const stream = OpenSSL.createHmac(algorithm, secret) // supports 'sha1'
@@ -36,7 +36,6 @@ describe('default (Spark)', () => {
 	const SECRET = 'CISCOSPARK_ACCESS_TOKEN'
 
 	before(() => {
-		// eslint-disable-next-line no-process-env
 		process.env[SECRET] = token
 	})
 
@@ -218,7 +217,6 @@ describe('default (Spark)', () => {
 
 	after(() => {
 		sandbox.restore()
-		// eslint-disable-next-line no-process-env
 		delete process.env[SECRET]
 	})
 

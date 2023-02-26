@@ -1,5 +1,4 @@
-/* eslint-env es6, node */
-/* eslint-disable no-process-env */
+/* eslint-env es6 *//* globals console, module, process, require */
 const { createServer } = require('http')
 
 // ciscospark-webhook-validator:
@@ -17,26 +16,30 @@ const server = createServer((req, res) => {
 		})
 })
 
-if (!module.parent) {
-	// ignores process.env.CISCOSPARK_ACCESS_TOKEN:
-	Spark.getAccessToken = () => Promise.resolve('')
-	Spark.getWebhookDetails = () => Promise.resolve({
-		secret: 'correct-horse-battery-staple',
-	})
-	// eslint-disable-next-line no-magic-numbers
-	const port = process.env.PORT || 8080
+const main = module === require.main
+
+if (main) {
+	// an access token is required if your webhook's secret isn't static:
+	const secret = process.env.WEBHOOK_SECRET || 'correct-horse-battery-stable'
+	//const token = process.env.CISCOSPARK_ACCESS_TOKEN || '...'
+	Spark.getWebhookDetails = () => Promise.resolve({ secret })
+	//Spark.getAccessToken = () => Promise.resolve(token)
+
 	/*
 	 * PROTIP: in another terminal, run these commands:
-	 * npm install ngrok # https://www.npmjs.com/package/ngrok
-	 * node_modules/.bin/ngrok http $PORT # targetUrl = HTTPS
+	 * - npm install ngrok # https://www.npmjs.com/package/ngrok
+	 * - node_modules/.bin/ngrok http $PORT # URLs to localhost
 	 * with your token from https://developer.ciscospark.com/
-	 * create a new Spark webhook w/ $secret and $targetUrl
-	 * open http://localhost:4040/ in your favorite browser
+	 * 1. create a new Spark webhook w/ secret + HTTPS target URL
+	 * 2. open http://localhost:4040/ in your favorite browser
+	 * 3. observe each event triggers the relevant webhook
+	 * (ngrok provides some UI on port 4040 by default)
 	 */
-	server.listen({ port }, (listenError) => {
-		if (listenError) {
-			console.error(listenError) // eslint-disable-line no-console
-			process.exit(1) // eslint-disable-line no-process-exit
+	const port = process.env.PORT || '8080'
+	server.listen({ port }, (err) => {
+		if (err) {
+			console.error(err) // eslint-disable-line no-console
+			process.exit(1)
 		}
 	})
 }

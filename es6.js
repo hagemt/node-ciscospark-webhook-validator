@@ -12,12 +12,14 @@ _.get = (maybeObject, keyString, defaultValue) => {
 	return Object(maybeObject)[keyString] || defaultValue
 }
 
+// eslint-disable-next-line no-magic-numbers
+const [BAD_REQUEST, OK] = [400, 200]
+
 class SparkResponseError extends Error {
 
 	constructor (res) {
 		const body = SparkResponseError.getBody(res)
-		// eslint-disable-next-line no-magic-numbers
-		const statusCode = _.get(res, 'statusCode', 400)
+		const statusCode = _.get(res, 'statusCode', BAD_REQUEST)
 		const text = _.get(body, 'message', HTTP.STATUS_CODES[statusCode])
 		super(`${text} (tracking ID: ${_.get(body, 'trackingid', 'none')})`)
 		Object.freeze(Object.defineProperty(this, 'response', { value: res }))
@@ -41,7 +43,6 @@ const Spark = {
 		return 'api.ciscospark.com'
 	},
 	getAccessToken: () => {
-		// eslint-disable-next-line no-process-env
 		return Promise.resolve(process.env.CISCOSPARK_ACCESS_TOKEN)
 	},
 }
@@ -61,8 +62,7 @@ class SparkWebhookLoader extends DataLoader {
 			const req = HTTPS.get(options, (res) => {
 				const done = (body) => {
 					res.body = body // for SparkResponseError
-					// eslint-disable-next-line no-magic-numbers
-					if (res.statusCode === 200) resolve(body)
+					if (res.statusCode === OK) resolve(body)
 					else reject(new SparkResponseError(res))
 				}
 				// consume the (incoming) res much like a req

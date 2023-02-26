@@ -28,15 +28,15 @@
   "devDependencies": {
     "babel-cli": "6.26.0",
     "babel-preset-env": "1.7.0",
-    "eslint": "5.9.0",
-    "mocha": "5.2.0",
-    "ngrok": "3.1.0",
+    "eslint": "8.35.0",
+    "mocha": "10.2.0",
+    "ngrok": "4.3.3",
     "nock": "13.3.0",
-    "nyc": "13.1.0",
-    "request": "2.88.0",
+    "nyc": "15.1.0",
+    "request": "2.88.2",
     "should": "13.2.3",
-    "sinon": "7.1.1",
-    "uuid": "3.3.2"
+    "sinon": "15.0.1",
+    "uuid": "9.0.0"
   },
   "engines": {
     "node": ">=6.6.0"
@@ -56,8 +56,8 @@
   },
   "scripts": {
     "babel": "babel es6.js -o es5.js",
-    "mocha": "mocha --require should",
-    "eslint": "eslint .eslintrc.js es6.js test",
+    "mocha": "mocha --require should test/spec.js",
+    "eslint": "eslint --fix --max-warnings=0 -- .eslintrc.js es6.js test",
     "prepublishOnly": "npm run-script babel",
     "test": "nyc -- npm run-script mocha",
     "posttest": "npm run-script eslint"

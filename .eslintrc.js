@@ -5,6 +5,10 @@ module.exports = {
 		'eslint:all',
 	],
 
+	reportUnusedDisableDirectives: true,
+
+	root: true,
+
 	rules: {
 		'array-bracket-newline': ['off'],
 		'array-element-newline': ['off'],
@@ -14,6 +18,7 @@ module.exports = {
 		'comma-dangle': ['error', 'always-multiline'],
 		'curly': ['error', 'multi-line'],
 		'dot-location': ['error', 'property'],
+		'function-call-argument-newline': ['off'],
 		'id-length': ['error', { exceptions: ['_'] }],
 		'indent': ['error', 'tab'],
 		'line-comment-position': ['off'],
