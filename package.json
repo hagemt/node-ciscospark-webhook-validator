@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "co-body": "6.1.0",
-    "dataloader": "2.2.2"
+    "dataloader": "2.2.3"
   },
   "devDependencies": {
     "babel-cli": "6.26.0",
